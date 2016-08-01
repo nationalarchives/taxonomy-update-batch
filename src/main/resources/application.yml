@@ -2,4 +2,11 @@ spring.activemq:
  broker-url: "tcp://localhost:61616"
  user: "system"
  password: "manager"
-spring.activemq.categorise-doc-queue-name: CATEGORISE.DOCUMENTS
+ categorise-doc-queue-name: CATEGORISE.DOCUMENTS
+ publish-categories-queue-name: PUBLISH.CATEGORIES
+
+mongo:
+ categories:
+  hosts: localhost
+  ports: 27017
+  database: taxonomy

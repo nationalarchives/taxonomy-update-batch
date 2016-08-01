@@ -16,12 +16,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyErrorType;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyException;
-import uk.gov.nationalarchives.discovery.taxonomy.domain.jms.CategoriseDocMessage;
+import uk.gov.nationalarchives.discovery.taxonomy.domain.jms.PublishCategoriesMessage;
 import uk.gov.nationalarchives.discovery.taxonomy.service.ProcessMessageService;
 
 import javax.jms.JMSException;
 import javax.jms.Message;
 import javax.jms.TextMessage;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -33,13 +34,13 @@ import java.util.List;
  *
  */
 @Component
-public class CategoriseDocMessageConsumer {
+public class PublishCategoriesMessageConsumer {
 
-    private static final Logger logger = LoggerFactory.getLogger(CategoriseDocMessageConsumer.class);
+    private static final Logger logger = LoggerFactory.getLogger(PublishCategoriesMessageConsumer.class);
     private final ProcessMessageService processMessageService;
 
     @Autowired
-    public CategoriseDocMessageConsumer(ProcessMessageService processMessageService) {
+    public PublishCategoriesMessageConsumer(ProcessMessageService processMessageService) {
         this.processMessageService = processMessageService;
     }
 
@@ -49,34 +50,42 @@ public class CategoriseDocMessageConsumer {
             return;
         }
 
-        CategoriseDocMessage categoriseDocumentMessage = getCategoriseDocMessageFromMessage(message);
+        PublishCategoriesMessage publishCategoriesMessage = getPublishCategoryMessageFromMessage(message);
 
-        logger.info("received Categorise Document message: {}, docReferences: {}",
-                categoriseDocumentMessage.getMessageId(),
-                ArrayUtils.toString(categoriseDocumentMessage.getListOfDocReferences()));
+        logger.info("received Publish Categories message: {}, categories: {}",
+                publishCategoriesMessage.getMessageId(),
+                ArrayUtils.toString(publishCategoriesMessage.getListOfCategoryIds()));
 
-        List<String> listOfCategoryIdsInError = processMessageService.categoriseDocuments(categoriseDocumentMessage
-                .getListOfDocReferences());
+        List<String> listOfCategoryIdsInError = new ArrayList<>();
+        for (String categoryId : publishCategoriesMessage.getListOfCategoryIds()) {
+            try{
+                processMessageService.publishCategory(categoryId);
+            }catch (TaxonomyException exeption){
+                listOfCategoryIdsInError.add(categoryId);
+            }
+        }
+
 
         if (!CollectionUtils.isEmpty(listOfCategoryIdsInError)) {
-            logger.warn("completed treatment for message: {} with {} errors", categoriseDocumentMessage.getMessageId(),
+            logger.warn("completed treatment for message: {} with {} errors", publishCategoriesMessage.getMessageId(),
                     listOfCategoryIdsInError.size());
             logger.error("CATEGORIES THAT COULD NOT BE PUBLISHED: {}",
                     Arrays.toString(listOfCategoryIdsInError.toArray()));
         } else {
-            logger.info("completed treatment for message: {}", categoriseDocumentMessage.getMessageId());
+            logger.info("completed treatment for message: {}", publishCategoriesMessage.getMessageId());
         }
     }
+
 
     protected boolean isTextMessageInvalid(Message message) {
         return !(message instanceof TextMessage);
     }
 
-    protected CategoriseDocMessage getCategoriseDocMessageFromMessage(Message message) {
-        List<String> listOfDocReferencesFromMessage = getListOfDocReferencesFromMessage((TextMessage) message);
-        String jmsMessageIdFromMessage = getJMSMessageIdFromMessage(message);
-        return new CategoriseDocMessage(jmsMessageIdFromMessage,
-                listOfDocReferencesFromMessage);
+    protected PublishCategoriesMessage getPublishCategoryMessageFromMessage(Message message) {
+        List<String> categories = getListOfCategoriesFromMessage((TextMessage) message);
+        String jmsMessageId = getJMSMessageIdFromMessage(message);
+        return new PublishCategoriesMessage(jmsMessageId,
+                categories);
     }
 
     protected String getJMSMessageIdFromMessage(Message message) {
@@ -89,14 +98,14 @@ public class CategoriseDocMessageConsumer {
         return messageId;
     }
 
-    protected List<String> getListOfDocReferencesFromMessage(TextMessage message) {
-        String listOfDocReferencesString;
+    protected List<String> getListOfCategoriesFromMessage(TextMessage message) {
+        String listOfCategoriesString;
         try {
-            listOfDocReferencesString = message.getText();
+            listOfCategoriesString = message.getText();
         } catch (JMSException e) {
             throw new TaxonomyException(TaxonomyErrorType.JMS_EXCEPTION, e);
         }
-        return Arrays.asList(listOfDocReferencesString.split(";"));
+        return Arrays.asList(listOfCategoriesString.split(";"));
     }
 
 }

@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.listener.DefaultMessageListenerContainer;
 import org.springframework.jms.listener.adapter.MessageListenerAdapter;
 import uk.gov.nationalarchives.discovery.taxonomy.jms.CategoriseDocMessageConsumer;
+import uk.gov.nationalarchives.discovery.taxonomy.jms.PublishCategoriesMessageConsumer;
 
 import javax.jms.ConnectionFactory;
 
@@ -24,10 +25,12 @@ import javax.jms.ConnectionFactory;
  *
  */
 @Configuration
-class CategorisationMsgConfiguration {
+class ActiveMQConfiguration {
 
     @Value("${spring.activemq.categorise-doc-queue-name}")
     String categoriseDocumentsQueueName;
+    @Value("${spring.activemq.publish-categories-queue-name}")
+    String publishCategoriesQueueName;
 
     @Bean
     MessageListenerAdapter categorisationListenerAdapter(CategoriseDocMessageConsumer categoriseDocMessageConsumer) {
@@ -43,6 +46,23 @@ class CategorisationMsgConfiguration {
         container.setMessageListener(categorisationListenerAdapter);
         container.setConnectionFactory(connectionFactory);
         container.setDestinationName(categoriseDocumentsQueueName);
+        return container;
+    }
+
+    @Bean
+    MessageListenerAdapter publishCategoriesListenerAdapter(PublishCategoriesMessageConsumer publishCategoriesMessageConsumer) {
+        MessageListenerAdapter messageListenerAdapter = new MessageListenerAdapter(publishCategoriesMessageConsumer);
+        messageListenerAdapter.setMessageConverter(null);
+        return messageListenerAdapter;
+    }
+
+    @Bean
+    DefaultMessageListenerContainer publishCategoriesContainer(MessageListenerAdapter publishCategoriesListenerAdapter,
+                                                            ConnectionFactory connectionFactory) {
+        DefaultMessageListenerContainer container = new DefaultMessageListenerContainer();
+        container.setMessageListener(publishCategoriesListenerAdapter);
+        container.setConnectionFactory(connectionFactory);
+        container.setDestinationName(publishCategoriesQueueName);
         return container;
     }
 
