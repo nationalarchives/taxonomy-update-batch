@@ -1,0 +1,4 @@
+.mvn/
+target/
+.idea
+taxonomy-update-batch.iml
