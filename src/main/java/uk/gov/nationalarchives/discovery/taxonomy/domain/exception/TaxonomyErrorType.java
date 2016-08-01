@@ -61,5 +61,5 @@ public enum TaxonomyErrorType {
     /**
      * Document was not found in lucene Index
      */
-    DOC_NOT_FOUND;
+    DOC_NOT_FOUND, CAT_NOT_FOUND;
 }

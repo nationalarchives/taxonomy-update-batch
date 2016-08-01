@@ -19,16 +19,6 @@ import org.springframework.stereotype.Repository;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.Category;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.CategoryRepository;
 
-/**
- * Implementation of CategoryRepository using MongoTemplate<br/>
- * The reason is that Spring does not allow to use separate database names or
- * locations while the categories collection is on a mongo database separate
- * from other collections. So we cannot use MongoRepositories here and have to
- * rewrite everything
- * 
- * @author jcharlet
- *
- */
 @Repository
 public class MongoCategoryRepositoryImpl implements CategoryRepository {
 

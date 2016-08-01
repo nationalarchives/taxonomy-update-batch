@@ -10,6 +10,8 @@ import org.mockito.junit.MockitoRule;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.Category;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.CategoryRepository;
+import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetViewReadRepository;
+import uk.gov.nationalarchives.discovery.taxonomy.repository.UpdateRepository;
 
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.verify;
@@ -22,7 +24,13 @@ import static org.mockito.Mockito.when;
 public class ProcessMessageServiceTest {
 
     @Mock
-    CategoryRepository categoryRepository;
+    private CategoryRepository categoryRepository;
+
+    @Mock
+    private UpdateRepository updateRepository;
+
+    @Mock
+    private InformationAssetViewReadRepository iaViewReadRepository;
 
     @Rule
     public MockitoRule mockitoRule = MockitoJUnit.rule();
@@ -30,7 +38,7 @@ public class ProcessMessageServiceTest {
     @Test
     public void testPublishCategory() {
         //given my service set up with mocks
-        ProcessMessageService processMessageService = new ProcessMessageService(categoryRepository);
+        ProcessMessageService processMessageService = new ProcessMessageService(categoryRepository, iaViewReadRepository, updateRepository);
 
         Category category = new Category();
         category.setTtl("test category");

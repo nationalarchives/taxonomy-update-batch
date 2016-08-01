@@ -5,8 +5,13 @@ spring.activemq:
  categorise-doc-queue-name: CATEGORISE.DOCUMENTS
  publish-categories-queue-name: PUBLISH.CATEGORIES
 
-mongo:
- categories:
-  hosts: localhost
-  ports: 27017
-  database: taxonomy
+mongo.categories:
+ hosts: localhost
+ ports: 27017
+ database: taxonomy
+
+solr.cloud:
+ read.host: http://wb-solrapp1:8985/solr/IAVIEWS_SNAPSHOT/
+ write:
+  host: http://localhost:8983/solr/IAView_subset/
+  commitwithin: 10000
