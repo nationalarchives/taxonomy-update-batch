@@ -25,7 +25,7 @@ public class ProcessMessageService {
     private final CategoryRepository categoryRepository;
     private final InformationAssetViewReadRepository iaViewReadRepository;
     private final UpdateRepository updateRepository;
-    public static final Integer PAGE_SIZE = 10;
+    public static final Integer PAGE_SIZE = 1000;
 
     @Autowired
     public ProcessMessageService(CategoryRepository categoryRepository, InformationAssetViewReadRepository iaViewReadRepository, UpdateRepository updateRepository) {
@@ -50,12 +50,23 @@ public class ProcessMessageService {
         Integer offset = 0;
         Integer nbOfIaViews = iaViewReadRepository.countItemsNotMatchingQueryAndWithCategory(category.getQry(), category
                 .getCiaid(), category.getSc());
+        logger.info("removing category '{}' from {} IAVIews", category.getTtl(), nbOfIaViews);
+        int percentageOfProcessedItems=0;
         while (offset < nbOfIaViews) {
             List<String> iaids = iaViewReadRepository.searchItemsNotMatchingQueryAndWithCategory(category.getQry(),
                     category.getCiaid(), category.getSc() != null, offset, PAGE_SIZE);
 
             updateRepository.removeCategoryFromIaids(category, iaids);
             offset += PAGE_SIZE;
+            logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
+        }
+        logger.info("finished removing category '{}'", category.getTtl());
+    }
+
+    private void logProgress(Integer offset, Integer totalNbOfItems, int lastPercentageOfProcessedItems) {
+        int percentageOfProcessedItems = offset*100/totalNbOfItems;
+        if (percentageOfProcessedItems>lastPercentageOfProcessedItems+10 && percentageOfProcessedItems < 100){
+            logger.info("processed {} % so far",percentageOfProcessedItems);
         }
     }
 
@@ -63,13 +74,17 @@ public class ProcessMessageService {
         Integer offset = 0;
         Integer nbOfIaViews = iaViewReadRepository.countItemsMatchingQueryAndWithoutCategory(category.getQry(), category
                 .getCiaid(), category.getSc());
+        logger.info("adding category '{}' to {} IAVIews", category.getTtl(), nbOfIaViews);
+        int percentageOfProcessedItems=0;
         while (offset < nbOfIaViews) {
             List<String> iaids = iaViewReadRepository.searchItemsMatchingQueryAndWithoutCategory(category.getQry(),
                     category.getCiaid(), category.getSc() != null, offset, PAGE_SIZE);
 
             updateRepository.addCategoryToIaids(category, iaids);
             offset += PAGE_SIZE;
+            logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
         }
+        logger.info("finished adding category '{}'", category.getTtl());
     }
 
     public List<String> categoriseDocuments(List<String> documents) {

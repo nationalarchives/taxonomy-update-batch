@@ -60,8 +60,9 @@ public class PublishCategoriesMessageConsumer {
         for (String categoryId : publishCategoriesMessage.getListOfCategoryIds()) {
             try{
                 processMessageService.publishCategory(categoryId);
-            }catch (TaxonomyException exeption){
+            }catch (TaxonomyException exception){
                 listOfCategoryIdsInError.add(categoryId);
+                logger.error(new StringBuffer("error occured while publishing ").append(categoryId).toString(),exception);
             }
         }
 

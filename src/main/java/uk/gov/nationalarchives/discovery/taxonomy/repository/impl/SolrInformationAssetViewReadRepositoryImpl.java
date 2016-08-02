@@ -19,6 +19,7 @@ import java.util.List;
 @Component
 public class SolrInformationAssetViewReadRepositoryImpl implements InformationAssetViewReadRepository {
 
+    public static final String SOLR_DOCREFERENCE_FIELD = "id";
     private final SolrClient solrCloudReadServer;
 
     @Autowired
@@ -47,7 +48,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
 
         List<String> iaids = new ArrayList<>();
         for (SolrDocument solrDocument : queryResponse.getResults()) {
-            iaids.add(solrDocument.get("DOCREFERENCE").toString());
+            iaids.add(solrDocument.get(SOLR_DOCREFERENCE_FIELD).toString());
         }
 
         return iaids;
@@ -72,7 +73,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
 
         List<String> iaids = new ArrayList<>();
         for (SolrDocument solrDocument : queryResponse.getResults()) {
-            iaids.add(solrDocument.get("DOCREFERENCE").toString());
+            iaids.add(solrDocument.get(SOLR_DOCREFERENCE_FIELD).toString());
         }
 
         return iaids;
@@ -106,7 +107,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
         SolrQuery query = new SolrQuery();
         query.setQuery(solrQuery);
         query.addFilterQuery(solrFilter);
-        query.setFields("DOCREFERENCE");
+        query.setFields(SOLR_DOCREFERENCE_FIELD);
         query.setRows(pageSize);
         query.setStart(offset);
         return query;
