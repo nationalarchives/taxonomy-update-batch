@@ -15,4 +15,10 @@ solr.cloud:
  read.host: http://localhost:12602/solr/DISCOVERY/
  write:
   host: http://localhost:8983/solr/IAView_subset/
-  commitwithin: 10000
+  commit-within: 10000
+
+
+
+scheduler.update-solr:
+ bulk-update-size: 1000
+ rate-between-updates: 2000

@@ -1,5 +1,6 @@
 package uk.gov.nationalarchives.discovery.taxonomy.repository;
 
+import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.AtomicUpdate;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.Category;
 
 import java.util.List;
@@ -12,4 +13,6 @@ public interface UpdateRepository {
     void removeCategoryFromIaids(Category category, List<String> iaids);
 
     void addCategoryToIaids(Category category, List<String> iaids);
+
+    List<AtomicUpdate> getLastUpdates(Integer nbOfItems);
 }

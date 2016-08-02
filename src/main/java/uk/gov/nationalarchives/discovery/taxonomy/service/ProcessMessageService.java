@@ -4,7 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyErrorType;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyException;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.Category;
@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * Created by jcharlet on 8/1/16.
  */
-@Component
+@Service
 public class ProcessMessageService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
