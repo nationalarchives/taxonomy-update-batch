@@ -41,6 +41,7 @@ public class MemoryUpdateRepositoryImpl implements UpdateRepository {
         int nbOfItemsPolled=0;
         while(!updateQueue.isEmpty() && nbOfItemsPolled<nbOfItems){
             updates.add(updateQueue.poll());
+            nbOfItemsPolled++;
         }
         return updates;
     }

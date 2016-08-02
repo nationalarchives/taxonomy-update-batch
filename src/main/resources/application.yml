@@ -20,5 +20,5 @@ solr.cloud:
 
 
 scheduler.update-solr:
- bulk-update-size: 1000
+ bulk-update-size: 2000
  rate-between-updates: 2000

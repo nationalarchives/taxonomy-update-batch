@@ -58,16 +58,18 @@ public class ProcessMessageService {
 
             updateRepository.removeCategoryFromIaids(category, iaids);
             offset += PAGE_SIZE;
-            logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
+            percentageOfProcessedItems=logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
         }
         logger.info("finished removing category '{}'", category.getTtl());
     }
 
-    private void logProgress(Integer offset, Integer totalNbOfItems, int lastPercentageOfProcessedItems) {
+    private int logProgress(Integer offset, Integer totalNbOfItems, int lastPercentageOfProcessedItems) {
         int percentageOfProcessedItems = offset*100/totalNbOfItems;
-        if (percentageOfProcessedItems>lastPercentageOfProcessedItems+10 && percentageOfProcessedItems < 100){
+        if (percentageOfProcessedItems>(lastPercentageOfProcessedItems+10) && percentageOfProcessedItems < 100){
             logger.info("processed {} % so far",percentageOfProcessedItems);
+            return (percentageOfProcessedItems/10)*10;
         }
+        return lastPercentageOfProcessedItems;
     }
 
     private void addCategoryToUncategorisedIAViews(Category category) {
@@ -82,7 +84,7 @@ public class ProcessMessageService {
 
             updateRepository.addCategoryToIaids(category, iaids);
             offset += PAGE_SIZE;
-            logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
+            percentageOfProcessedItems= logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
         }
         logger.info("finished adding category '{}'", category.getTtl());
     }
