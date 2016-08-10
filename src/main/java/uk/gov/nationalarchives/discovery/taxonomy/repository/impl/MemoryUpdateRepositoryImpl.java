@@ -1,5 +1,7 @@
 package uk.gov.nationalarchives.discovery.taxonomy.repository.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.AtomicUpdate;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.AtomicUpdateType;
@@ -15,6 +17,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  */
 @Repository
 public class MemoryUpdateRepositoryImpl implements UpdateRepository {
+
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private static final int QUEUE_MAX_SIZE = 10000;
     private static ConcurrentLinkedQueue<AtomicUpdate> updateQueue = new ConcurrentLinkedQueue<>();
@@ -46,12 +50,13 @@ public class MemoryUpdateRepositoryImpl implements UpdateRepository {
         return updates;
     }
 
+    //FIXME use BlockedQueue insteadQ
     private void waitForQueueToHaveAvailableSpace() {
         while (updateQueue.size() >= QUEUE_MAX_SIZE){
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                logger.error("an error occured while waiting to have available space",e);
             }
         }
     }

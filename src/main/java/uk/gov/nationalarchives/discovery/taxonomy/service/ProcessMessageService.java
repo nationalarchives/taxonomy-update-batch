@@ -92,7 +92,7 @@ public class ProcessMessageService {
     public List<String> categoriseDocuments(List<String> documents) {
         List<String> listOfCategoryIdsInError = new ArrayList<>();
         logger.info("Categorising documents {}", StringUtils.join(", ", documents));
-        //TODO to implement
+        //TODO implement categoriseDocuments
         return listOfCategoryIdsInError;
     }
 }

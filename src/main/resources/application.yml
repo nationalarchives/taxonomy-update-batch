@@ -11,7 +11,7 @@ mongo.categories:
  database: taxonomy
 
 solr.cloud:
-#read.host: http://wb-solrapp1:8985/solr/IAVIEWS_SNAPSHOT/
+# read.host: http://wb-solrapp2:8985/solr/IAVIEWS_SNAPSHOT/
  read.host: http://localhost:12602/solr/DISCOVERY/
  write:
   host: http://localhost:8983/solr/IAView_subset/

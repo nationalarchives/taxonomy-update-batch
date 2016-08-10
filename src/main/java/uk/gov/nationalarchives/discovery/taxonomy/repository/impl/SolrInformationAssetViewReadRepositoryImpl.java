@@ -94,8 +94,8 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
         return "NOT(" + query + ")";
     }
 
-    private String textcasnopunc(String query){
-        return "textcasnopunc:(" + query + ")";
+    private String textnocasnopunc(String query){
+        return "textnocasnopunc:(" + query + ")";
     }
 
     private SolrQuery createSolrQuery(String categoryQuery, String matchCategoryIdQuery, boolean hasQueryThreshold, Integer offset, Integer pageSize) {
@@ -103,9 +103,9 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
         String solrFilter;
         if (hasQueryThreshold) {
             solrQuery = "*:*";
-            solrFilter = textcasnopunc(categoryQuery) + " " + matchCategoryIdQuery;
+            solrFilter = textnocasnopunc(categoryQuery) + " " + matchCategoryIdQuery;
         } else {
-            solrQuery = textcasnopunc(categoryQuery);
+            solrQuery = textnocasnopunc(categoryQuery);
             solrFilter = matchCategoryIdQuery;
         }
 
