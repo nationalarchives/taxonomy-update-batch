@@ -1,3 +1,5 @@
+logging.level.uk.gov.nationalarchives.discovery.taxonomy: DEBUG
+
 spring.activemq:
  broker-url: "tcp://localhost:61616"
  user: "system"
@@ -11,14 +13,13 @@ mongo.categories:
  database: taxonomy
 
 solr.cloud:
-# read.host: http://wb-solrapp2:8985/solr/IAVIEWS_SNAPSHOT/
  read.host: http://localhost:12602/solr/DISCOVERY/
  write:
-  host: http://localhost:8983/solr/IAView_subset/
+  host: http://localhost:12602/solr/DISCOVERY/
   commit-within: 10000
 
 
 
 scheduler.update-solr:
- bulk-update-size: 2000
+ bulk-update-size: 5000
  rate-between-updates: 2000

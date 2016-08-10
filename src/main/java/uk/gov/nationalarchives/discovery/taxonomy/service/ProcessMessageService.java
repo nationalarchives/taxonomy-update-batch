@@ -1,6 +1,8 @@
 package uk.gov.nationalarchives.discovery.taxonomy.service;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.solr.client.solrj.SolrClient;
+import org.apache.solr.client.solrj.SolrServerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import uk.gov.nationalarchives.discovery.taxonomy.repository.CategoryRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetViewReadRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.UpdateRepository;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,13 +28,19 @@ public class ProcessMessageService {
     private final CategoryRepository categoryRepository;
     private final InformationAssetViewReadRepository iaViewReadRepository;
     private final UpdateRepository updateRepository;
+    //TODO reader PAGE_SIZE to put in application.yml, actually, no point it's bigger than updates, they're as fast
     public static final Integer PAGE_SIZE = 1000;
+    private final SolrClient solrCloudReadServer;
+    private final SolrClient solrCloudWriteServer;
+
 
     @Autowired
-    public ProcessMessageService(CategoryRepository categoryRepository, InformationAssetViewReadRepository iaViewReadRepository, UpdateRepository updateRepository) {
+    public ProcessMessageService(CategoryRepository categoryRepository, InformationAssetViewReadRepository iaViewReadRepository, UpdateRepository updateRepository, SolrClient solrCloudReadServer, SolrClient solrCloudWriteServer) {
         this.categoryRepository = categoryRepository;
         this.iaViewReadRepository = iaViewReadRepository;
         this.updateRepository = updateRepository;
+        this.solrCloudReadServer = solrCloudReadServer;
+        this.solrCloudWriteServer = solrCloudWriteServer;
     }
 
     public void publishCategory(String categoryId) {
@@ -46,6 +55,7 @@ public class ProcessMessageService {
         removeCategoryFromCategorisedIAViews(category);
     }
 
+    //TODO apply super dirty workaround on removal of categories too
     private void removeCategoryFromCategorisedIAViews(Category category) {
         Integer offset = 0;
         Integer nbOfIaViews = iaViewReadRepository.countItemsNotMatchingQueryAndWithCategory(category.getQry(), category
@@ -54,13 +64,17 @@ public class ProcessMessageService {
         int percentageOfProcessedItems=0;
         while (offset < nbOfIaViews) {
             List<String> iaids = iaViewReadRepository.searchItemsNotMatchingQueryAndWithCategory(category.getQry(),
-                    category.getCiaid(), category.getSc() != null, offset, PAGE_SIZE);
+                    category.getCiaid(), hasThreshold(category.getSc()), offset, PAGE_SIZE);
 
             updateRepository.removeCategoryFromIaids(category, iaids);
             offset += PAGE_SIZE;
             percentageOfProcessedItems=logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
         }
         logger.info("finished removing category '{}'", category.getTtl());
+    }
+
+    private boolean hasThreshold(Double score) {
+        return !(new Double(0).equals(score));
     }
 
     private int logProgress(Integer offset, Integer totalNbOfItems, int lastPercentageOfProcessedItems) {
@@ -72,20 +86,41 @@ public class ProcessMessageService {
         return lastPercentageOfProcessedItems;
     }
 
+    //FIXME to clean and refactor
     private void addCategoryToUncategorisedIAViews(Category category) {
-        Integer offset = 0;
         Integer nbOfIaViews = iaViewReadRepository.countItemsMatchingQueryAndWithoutCategory(category.getQry(), category
                 .getCiaid(), category.getSc());
+        if(nbOfIaViews==0){
+            logger.info("category '{}' has no IAVIews to add", category.getTtl());
+            return;
+        }
         logger.info("adding category '{}' to {} IAVIews", category.getTtl(), nbOfIaViews);
         int percentageOfProcessedItems=0;
-        while (offset < nbOfIaViews) {
-            List<String> iaids = iaViewReadRepository.searchItemsMatchingQueryAndWithoutCategory(category.getQry(),
-                    category.getCiaid(), category.getSc() != null, offset, PAGE_SIZE);
+        do {
+            Integer offset = 0;
+            List<String> iaids = new ArrayList<>();
+            do {
+                logger.debug("processed {} IAVIews", offset);
+                iaids = iaViewReadRepository.searchItemsMatchingQueryAndWithoutCategory(category.getQry(),
+                        category.getCiaid(), hasThreshold(category.getSc()), offset, PAGE_SIZE);
 
-            updateRepository.addCategoryToIaids(category, iaids);
-            offset += PAGE_SIZE;
-            percentageOfProcessedItems= logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
-        }
+                updateRepository.addCategoryToIaids(category, iaids);
+                offset += PAGE_SIZE;
+                percentageOfProcessedItems = logProgress(offset, nbOfIaViews, percentageOfProcessedItems);
+            } while (iaids.size()>0);
+            try {
+                solrCloudWriteServer.commit();
+                Thread.sleep(2000);
+                solrCloudReadServer.commit();
+                Thread.sleep(2000);
+            } catch (SolrServerException | IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } while (iaViewReadRepository.countItemsMatchingQueryAndWithoutCategory(category.getQry(), category
+                .getCiaid(), category.getSc()) > 0);
+
         logger.info("finished adding category '{}'", category.getTtl());
     }
 

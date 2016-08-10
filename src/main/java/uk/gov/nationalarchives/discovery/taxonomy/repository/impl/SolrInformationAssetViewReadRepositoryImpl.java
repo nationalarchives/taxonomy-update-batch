@@ -58,7 +58,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     @Override
     public Integer countItemsMatchingQueryAndWithoutCategory(String categoryQuery, String categoryId, Double scoreThreshold) {
         String matchCategoryIdQuery= InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-        SolrQuery query = createSolrQuery(categoryQuery, not(matchCategoryIdQuery), false, 0, 0);
+        SolrQuery query = createSolrQuery(categoryQuery, arrayDoesNotContain(matchCategoryIdQuery), false, 0, 0);
 
         QueryResponse queryResponse = querySolrIndex(query);
 
@@ -68,7 +68,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     @Override
     public List<String> searchItemsMatchingQueryAndWithoutCategory(String categoryQuery, String categoryId, boolean hasQueryThreshold, Integer offset, Integer pageSize) {
         String matchCategoryIdQuery= InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-        SolrQuery query = createSolrQuery(categoryQuery, not(matchCategoryIdQuery), hasQueryThreshold, offset, pageSize);
+        SolrQuery query = createSolrQuery(categoryQuery, arrayDoesNotContain(matchCategoryIdQuery), hasQueryThreshold, offset, pageSize);
 
         QueryResponse queryResponse = querySolrIndex(query);
 
@@ -92,6 +92,9 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
 
     private String not(String query) {
         return "NOT(" + query + ")";
+    }
+    private String arrayDoesNotContain(String query) {
+        return "-(" + query + ")";
     }
 
     private String textnocasnopunc(String query){

@@ -1,5 +1,6 @@
 package uk.gov.nationalarchives.discovery.taxonomy.service;
 
+import org.apache.solr.client.solrj.SolrClient;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -32,13 +33,19 @@ public class ProcessMessageServiceTest {
     @Mock
     private InformationAssetViewReadRepository iaViewReadRepository;
 
+    @Mock
+    private SolrClient solrCloudReadServer;
+    @Mock
+    private SolrClient solrCloudWriteServer;
+
     @Rule
     public MockitoRule mockitoRule = MockitoJUnit.rule();
+
 
     @Test
     public void testPublishCategory() {
         //given my service set up with mocks
-        ProcessMessageService processMessageService = new ProcessMessageService(categoryRepository, iaViewReadRepository, updateRepository);
+        ProcessMessageService processMessageService = new ProcessMessageService(categoryRepository, iaViewReadRepository, updateRepository, solrCloudReadServer, solrCloudWriteServer);
 
         Category category = new Category();
         category.setTtl("test category");

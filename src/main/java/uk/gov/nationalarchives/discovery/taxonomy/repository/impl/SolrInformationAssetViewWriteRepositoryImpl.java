@@ -36,7 +36,7 @@ public class SolrInformationAssetViewWriteRepositoryImpl implements InformationA
         List<SolrInputDocument> solrInputDocuments = new ArrayList<>();
         for (AtomicUpdate update : listOfUpdates) {
             SolrInputDocument documentForAtomicUpdate = createDocumentForAtomicUpdate(
-                    update.getIaid(), update.getCategoryId(), update.getCategoryTitle(), update.getType());
+                    update.getIaid(), update.getTaxonomyId(), update.getTaxonomy(), update.getType());
             solrInputDocuments.add(documentForAtomicUpdate);
         }
 

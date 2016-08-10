@@ -5,14 +5,14 @@ package uk.gov.nationalarchives.discovery.taxonomy.domain.repository;
  */
 public class AtomicUpdate {
     private String iaid;
-    private String categoryId;
-    private String categoryTitle;
+    private String taxonomyId;
+    private String taxonomy;
     private AtomicUpdateType type;
 
-    public AtomicUpdate(String iaid, String categoryId, String categoryTitle, AtomicUpdateType type) {
+    public AtomicUpdate(String iaid, String taxonomyId, String taxonomy, AtomicUpdateType type) {
         this.iaid = iaid;
-        this.categoryId = categoryId;
-        this.categoryTitle = categoryTitle;
+        this.taxonomyId = taxonomyId;
+        this.taxonomy = taxonomy;
         this.type = type;
     }
 
@@ -20,12 +20,12 @@ public class AtomicUpdate {
         return iaid;
     }
 
-    public String getCategoryId() {
-        return categoryId;
+    public String getTaxonomyId() {
+        return taxonomyId;
     }
 
-    public String getCategoryTitle() {
-        return categoryTitle;
+    public String getTaxonomy() {
+        return taxonomy;
     }
 
     public AtomicUpdateType getType() {

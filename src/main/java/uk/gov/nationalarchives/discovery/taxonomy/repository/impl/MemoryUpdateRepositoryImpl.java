@@ -10,7 +10,8 @@ import uk.gov.nationalarchives.discovery.taxonomy.repository.UpdateRepository;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 
 /**
  * Created by jcharlet on 8/1/16.
@@ -21,21 +22,30 @@ public class MemoryUpdateRepositoryImpl implements UpdateRepository {
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     private static final int QUEUE_MAX_SIZE = 10000;
-    private static ConcurrentLinkedQueue<AtomicUpdate> updateQueue = new ConcurrentLinkedQueue<>();
+    private static BlockingQueue<AtomicUpdate> updateQueue = new LinkedBlockingDeque<>(QUEUE_MAX_SIZE);
 
     @Override
     public void removeCategoryFromIaids(Category category, List<String> iaids) {
-        waitForQueueToHaveAvailableSpace();
         for (String iaid : iaids) {
-            updateQueue.add(new AtomicUpdate(iaid, category.getCiaid(),category.getTtl(), AtomicUpdateType.remove));
+            try {
+                updateQueue.put(new AtomicUpdate(iaid, category.getCiaid(), category.getCiaid() + " " + category.getTtl(),
+                        AtomicUpdateType.remove));
+            } catch (InterruptedException e) {
+                logger.error("error while adding category to remove",e);
+            }
         }
     }
 
     @Override
     public void addCategoryToIaids(Category category, List<String> iaids) {
-        waitForQueueToHaveAvailableSpace();
+        logger.debug("adding {} updates", iaids.size());
         for (String iaid : iaids) {
-            updateQueue.add(new AtomicUpdate(iaid, category.getCiaid(),category.getTtl(), AtomicUpdateType.add));
+            try {
+                updateQueue.put(new AtomicUpdate(iaid, category.getCiaid(), category.getCiaid() + " " + category.getTtl(),
+                        AtomicUpdateType.add));
+            } catch (InterruptedException e) {
+                logger.error("error while adding category to remove", e);
+            }
         }
     }
 
@@ -47,18 +57,10 @@ public class MemoryUpdateRepositoryImpl implements UpdateRepository {
             updates.add(updateQueue.poll());
             nbOfItemsPolled++;
         }
-        return updates;
-    }
-
-    //FIXME use BlockedQueue insteadQ
-    private void waitForQueueToHaveAvailableSpace() {
-        while (updateQueue.size() >= QUEUE_MAX_SIZE){
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                logger.error("an error occured while waiting to have available space",e);
-            }
+        if(updates.size()!=0){
+            logger.debug("retrieving {} updates", updates.size());
         }
+        return updates;
     }
 
 }
