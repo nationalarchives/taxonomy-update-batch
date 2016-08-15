@@ -6,6 +6,7 @@ import org.apache.solr.client.solrj.SolrServerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyErrorType;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyException;
@@ -28,10 +29,10 @@ public class ProcessMessageService {
     private final CategoryRepository categoryRepository;
     private final InformationAssetViewReadRepository iaViewReadRepository;
     private final UpdateRepository updateRepository;
-    //TODO reader PAGE_SIZE to put in application.yml, actually, no point it's bigger than updates, they're as fast
-    public static final Integer PAGE_SIZE = 1000;
     private final SolrClient solrCloudReadServer;
     private final SolrClient solrCloudWriteServer;
+    @Value("${solr.cloud.read.query-page-size}")
+    public Integer pageSize;
 
 
     @Autowired
@@ -64,10 +65,10 @@ public class ProcessMessageService {
         int percentageOfProcessedItems=0;
         while (offset < nbOfIaViews) {
             List<String> iaids = iaViewReadRepository.searchItemsNotMatchingQueryAndWithCategory(category.getQry(),
-                    category.getCiaid(), hasThreshold(category.getSc()), offset, PAGE_SIZE);
+                    category.getCiaid(), hasThreshold(category.getSc()), offset, pageSize);
 
             updateRepository.removeCategoryFromIaids(category, iaids);
-            offset += PAGE_SIZE;
+            offset += pageSize;
             percentageOfProcessedItems=logProgress(offset,nbOfIaViews, percentageOfProcessedItems);
         }
         logger.info("finished removing category '{}'", category.getTtl());
@@ -102,10 +103,10 @@ public class ProcessMessageService {
             do {
                 logger.debug("processed {} IAVIews", offset);
                 iaids = iaViewReadRepository.searchItemsMatchingQueryAndWithoutCategory(category.getQry(),
-                        category.getCiaid(), hasThreshold(category.getSc()), offset, PAGE_SIZE);
+                        category.getCiaid(), hasThreshold(category.getSc()), offset, pageSize);
 
                 updateRepository.addCategoryToIaids(category, iaids);
-                offset += PAGE_SIZE;
+                offset += pageSize;
                 percentageOfProcessedItems = logProgress(offset, nbOfIaViews, percentageOfProcessedItems);
             } while (iaids.size()>0);
             try {
