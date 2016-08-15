@@ -15,6 +15,9 @@ import uk.gov.nationalarchives.discovery.taxonomy.repository.CategoryRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetViewReadRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetViewWriteRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.UpdateRepository;
+import uk.gov.nationalarchives.discovery.taxonomy.service.command.AddCategoryToUncategorisedIAViewsCommand;
+import uk.gov.nationalarchives.discovery.taxonomy.service.command.RemoveCategoryFromCategorisedIAViewsCommand;
+import uk.gov.nationalarchives.discovery.taxonomy.service.command.AbstractUpdateIAViewsCommand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +33,8 @@ public class ProcessMessageService {
     private final InformationAssetViewReadRepository iaViewReadRepository;
     private final InformationAssetViewWriteRepository informationAssetViewWriteRepository;
     private final UpdateRepository updateRepository;
+    private final AddCategoryToUncategorisedIAViewsCommand addCategoryToUncategorisedIAViewsCommand;
+    private final RemoveCategoryFromCategorisedIAViewsCommand removeCategoryFromCategorisedIAViewsCommand;
     @Value("${solr.cloud.read.query-page-size}")
     public Integer pageSize;
 
@@ -40,6 +45,10 @@ public class ProcessMessageService {
         this.iaViewReadRepository = iaViewReadRepository;
         this.informationAssetViewWriteRepository = informationAssetViewWriteRepository;
         this.updateRepository = updateRepository;
+        addCategoryToUncategorisedIAViewsCommand = new AddCategoryToUncategorisedIAViewsCommand(this, updateRepository,
+                iaViewReadRepository);
+        removeCategoryFromCategorisedIAViewsCommand = new RemoveCategoryFromCategorisedIAViewsCommand(updateRepository,
+                iaViewReadRepository);
     }
 
     public void publishCategory(String categoryId) {
@@ -50,38 +59,26 @@ public class ProcessMessageService {
                             .toString());
         }
         logger.info("Publishing category {}", category.getTtl());
-        addCategoryToUncategorisedIAViews(category);
-        removeCategoryFromCategorisedIAViews(category);
+        runCommandOnCategory(addCategoryToUncategorisedIAViewsCommand, category);
+        runCommandOnCategory(removeCategoryFromCategorisedIAViewsCommand, category);
 
-        //FIXME since queries and updates are bounded, I could run updates as async tasks, rather than have a
-        // scheduled task, would make things look simpler
-        try {
-            while (updateRepository.hasPendingUpdates()) {
-                Thread.sleep(1000);
-            }
-            Thread.sleep(2000);
-            informationAssetViewWriteRepository.commit();
-        } catch (InterruptedException e) {
-            logger.error("process was interrupted", e);
-        }
+        waitForUpdatesToCompleteAndCommit();
     }
 
-    private void removeCategoryFromCategorisedIAViews(Category category) {
-        Integer nbOfIaViews = iaViewReadRepository.countItemsNotMatchingQueryAndWithCategory(category.getQry(), category
-                .getCiaid(), category.getSc());
+    private void runCommandOnCategory(AbstractUpdateIAViewsCommand command, Category category) {
+        Integer nbOfIaViews = command.countItemsToUpdate(category);
         if (nbOfIaViews == 0) {
-            logger.info("category '{}' has no IAVIews to remove", category.getTtl());
+            logger.info("category '{}' has no IAVIews to {}", category.getTtl(), command.getCommandName());
             return;
         }
-        logger.info("removing category '{}' to {} IAVIews", category.getTtl(), nbOfIaViews);
+        logger.info("{} category '{}' to {} IAVIews", command.getCommandName(), category.getTtl(), nbOfIaViews);
 
         ProgressInformation progressInformation = new ProgressInformation(nbOfIaViews);
 
         String lastCursorMark = null;
         while (true) {
             logger.debug("processed {} IAVIews, cursor:{}", progressInformation.getNbOfProcessedItems(), lastCursorMark);
-            SearchQueryResultsWithCursor searchQueryResultsWithCursor = iaViewReadRepository.searchItemsNotMatchingQueryAndWithCategory(category.getQry(),
-                    category.getCiaid(), hasThreshold(category.getSc()), lastCursorMark, pageSize);
+            SearchQueryResultsWithCursor searchQueryResultsWithCursor = command.searchItemsToUpdate(category, lastCursorMark, pageSize);
 
             if (searchQueryResultsWithCursor.getCursor().equals(lastCursorMark)) {
                 logger.debug("completed updates, updated {}", progressInformation.getNbOfProcessedItems());
@@ -91,16 +88,12 @@ public class ProcessMessageService {
             List<String> iaids = searchQueryResultsWithCursor.getResults();
             lastCursorMark = searchQueryResultsWithCursor.getCursor();
 
-            updateRepository.removeCategoryFromIaids(category, iaids);
+            command.updateItems(category, iaids);
 
             updateAndLogProgress(progressInformation, iaids.size());
         }
 
-        logger.info("finished removing category '{}'", category.getTtl());
-    }
-
-    private boolean hasThreshold(Double score) {
-        return !(new Double(0).equals(score));
+        logger.info("finished action to {} category '{}'", command.getCommandName(), category.getTtl());
     }
 
     private void updateAndLogProgress(ProgressInformation progressInformation, int newNbOfProcessedItems) {
@@ -112,39 +105,18 @@ public class ProcessMessageService {
         }
     }
 
-    //FIXME duplicated code with removeCategoryFromCategorisedIAViews
-    private void addCategoryToUncategorisedIAViews(Category category) {
-        Integer nbOfIaViews = iaViewReadRepository.countItemsMatchingQueryAndWithoutCategory(category.getQry(), category
-                .getCiaid(), category.getSc());
-        if (nbOfIaViews == 0) {
-            logger.info("category '{}' has no IAVIews to add", category.getTtl());
-            return;
-        }
-        logger.info("adding category '{}' to {} IAVIews", category.getTtl(), nbOfIaViews);
-
-        ProgressInformation progressInformation = new ProgressInformation(nbOfIaViews);
-
-        String lastCursorMark = null;
-        while (true) {
-            logger.debug("processed {} IAVIews, cursor:{}", progressInformation.getNbOfProcessedItems(), lastCursorMark);
-            SearchQueryResultsWithCursor searchQueryResultsWithCursor = iaViewReadRepository.searchItemsMatchingQueryAndWithoutCategory(category.getQry(),
-                    category.getCiaid(), hasThreshold(category.getSc()), lastCursorMark, pageSize);
-
-            if (searchQueryResultsWithCursor.getCursor().equals(lastCursorMark)) {
-                logger.debug("completed updates, updated {}", progressInformation.getNbOfProcessedItems());
-                break;
+    private void waitForUpdatesToCompleteAndCommit() {
+        try {
+            while (updateRepository.hasPendingUpdates()) {
+                Thread.sleep(1000);
             }
-
-            List<String> iaids = searchQueryResultsWithCursor.getResults();
-            lastCursorMark = searchQueryResultsWithCursor.getCursor();
-
-            updateRepository.addCategoryToIaids(category, iaids);
-
-            updateAndLogProgress(progressInformation, iaids.size());
+            Thread.sleep(2000);
+            informationAssetViewWriteRepository.commit();
+        } catch (InterruptedException e) {
+            logger.error("process was interrupted", e);
         }
-
-        logger.info("finished adding category '{}'", category.getTtl());
     }
+
 
     public List<String> categoriseDocuments(List<String> documents) {
         List<String> listOfCategoryIdsInError = new ArrayList<>();
