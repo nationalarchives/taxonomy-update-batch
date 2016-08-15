@@ -18,7 +18,6 @@ solr.cloud:
   query-page-size: 1000
  write:
   host: http://localhost:12602/solr/DISCOVERY/
-  commit-within: 10000
 
 
 

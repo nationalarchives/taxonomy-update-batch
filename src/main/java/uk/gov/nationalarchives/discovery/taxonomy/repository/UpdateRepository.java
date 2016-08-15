@@ -14,5 +14,7 @@ public interface UpdateRepository {
 
     void addCategoryToIaids(Category category, List<String> iaids);
 
+    boolean hasPendingUpdates();
+
     List<AtomicUpdate> getLastUpdates(Integer nbOfItems);
 }

@@ -9,4 +9,6 @@ import java.util.List;
  */
 public interface InformationAssetViewWriteRepository {
     void bulkUpdate(List<AtomicUpdate> listOfUpdates);
+
+    void commit();
 }

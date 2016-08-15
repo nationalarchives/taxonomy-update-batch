@@ -4,7 +4,6 @@ import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrServerException;
 import org.apache.solr.common.SolrInputDocument;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyErrorType;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.exception.TaxonomyException;
@@ -23,9 +22,6 @@ import java.util.*;
 public class SolrInformationAssetViewWriteRepositoryImpl implements InformationAssetViewWriteRepository {
     private final SolrClient solrCloudWriteServer;
 
-    @Value("${solr.cloud.write.commit-within}")
-    Integer timeInMs;
-
     @Autowired
     public SolrInformationAssetViewWriteRepositoryImpl(SolrClient solrCloudWriteServer) {
         this.solrCloudWriteServer = solrCloudWriteServer;
@@ -41,7 +37,16 @@ public class SolrInformationAssetViewWriteRepositoryImpl implements InformationA
         }
 
         try {
-            solrCloudWriteServer.add(solrInputDocuments, timeInMs);
+            solrCloudWriteServer.add(solrInputDocuments);
+        } catch (SolrServerException | IOException e) {
+            throw new TaxonomyException(TaxonomyErrorType.SOLR_WRITE_EXCEPTION, e);
+        }
+    }
+
+    @Override
+    public void commit() {
+        try {
+            solrCloudWriteServer.commit();
         } catch (SolrServerException | IOException e) {
             throw new TaxonomyException(TaxonomyErrorType.SOLR_WRITE_EXCEPTION, e);
         }

@@ -19,10 +19,9 @@ import java.util.concurrent.LinkedBlockingDeque;
 @Repository
 public class MemoryUpdateRepositoryImpl implements UpdateRepository {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
-
     private static final int QUEUE_MAX_SIZE = 10000;
     private static BlockingQueue<AtomicUpdate> updateQueue = new LinkedBlockingDeque<>(QUEUE_MAX_SIZE);
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Override
     public void removeCategoryFromIaids(Category category, List<String> iaids) {
@@ -47,6 +46,11 @@ public class MemoryUpdateRepositoryImpl implements UpdateRepository {
                 logger.error("error while adding category to remove", e);
             }
         }
+    }
+
+    @Override
+    public boolean hasPendingUpdates() {
+        return !updateQueue.isEmpty();
     }
 
     @Override
