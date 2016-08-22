@@ -4,7 +4,6 @@ import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.Category;
 import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.SearchQueryResultsWithCursor;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetViewReadRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.UpdateRepository;
-import uk.gov.nationalarchives.discovery.taxonomy.service.ProcessMessageService;
 
 import java.util.List;
 
@@ -13,11 +12,8 @@ import java.util.List;
  */
 public class AddCategoryToUncategorisedIAViewsCommand extends AbstractUpdateIAViewsCommand {
 
-    private ProcessMessageService processMessageService;
-
-    public AddCategoryToUncategorisedIAViewsCommand(ProcessMessageService processMessageService, UpdateRepository updateRepository, InformationAssetViewReadRepository iaViewReadRepository) {
+    public AddCategoryToUncategorisedIAViewsCommand(UpdateRepository updateRepository, InformationAssetViewReadRepository iaViewReadRepository) {
         super(updateRepository, iaViewReadRepository, "add");
-        this.processMessageService = processMessageService;
     }
 
     @Override
@@ -29,7 +25,7 @@ public class AddCategoryToUncategorisedIAViewsCommand extends AbstractUpdateIAVi
     @Override
     public SearchQueryResultsWithCursor searchItemsToUpdate(Category category, String lastCursorMark, int pageSize) {
         return iaViewReadRepository.searchItemsMatchingQueryAndWithoutCategory(category.getQry(),
-                category.getCiaid(), hasThreshold(category.getSc()), lastCursorMark, pageSize);
+                category.getCiaid(), category.getSc(), lastCursorMark, pageSize);
     }
 
     @Override

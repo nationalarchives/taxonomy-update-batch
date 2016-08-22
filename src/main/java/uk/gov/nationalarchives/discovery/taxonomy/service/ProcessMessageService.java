@@ -15,9 +15,10 @@ import uk.gov.nationalarchives.discovery.taxonomy.repository.CategoryRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetViewReadRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetViewWriteRepository;
 import uk.gov.nationalarchives.discovery.taxonomy.repository.UpdateRepository;
-import uk.gov.nationalarchives.discovery.taxonomy.service.command.AddCategoryToUncategorisedIAViewsCommand;
-import uk.gov.nationalarchives.discovery.taxonomy.service.command.RemoveCategoryFromCategorisedIAViewsCommand;
 import uk.gov.nationalarchives.discovery.taxonomy.service.command.AbstractUpdateIAViewsCommand;
+import uk.gov.nationalarchives.discovery.taxonomy.service.command.AddCategoryToUncategorisedIAViewsCommand;
+import uk.gov.nationalarchives.discovery.taxonomy.service.command.RemoveCategoryFromCategorisedIAViewsBelowThresholdCommand;
+import uk.gov.nationalarchives.discovery.taxonomy.service.command.RemoveCategoryFromCategorisedIAViewsCommand;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,11 +31,11 @@ public class ProcessMessageService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final CategoryRepository categoryRepository;
-    private final InformationAssetViewReadRepository iaViewReadRepository;
     private final InformationAssetViewWriteRepository informationAssetViewWriteRepository;
     private final UpdateRepository updateRepository;
     private final AddCategoryToUncategorisedIAViewsCommand addCategoryToUncategorisedIAViewsCommand;
     private final RemoveCategoryFromCategorisedIAViewsCommand removeCategoryFromCategorisedIAViewsCommand;
+    private final RemoveCategoryFromCategorisedIAViewsBelowThresholdCommand removeCategoryFromCategorisedIAViewsBelowThresholdCommand;
     @Value("${solr.cloud.read.query-page-size}")
     public Integer pageSize;
 
@@ -42,12 +43,13 @@ public class ProcessMessageService {
     @Autowired
     public ProcessMessageService(CategoryRepository categoryRepository, InformationAssetViewReadRepository iaViewReadRepository, InformationAssetViewWriteRepository informationAssetViewWriteRepository, UpdateRepository updateRepository) {
         this.categoryRepository = categoryRepository;
-        this.iaViewReadRepository = iaViewReadRepository;
         this.informationAssetViewWriteRepository = informationAssetViewWriteRepository;
         this.updateRepository = updateRepository;
-        addCategoryToUncategorisedIAViewsCommand = new AddCategoryToUncategorisedIAViewsCommand(this, updateRepository,
+        addCategoryToUncategorisedIAViewsCommand = new AddCategoryToUncategorisedIAViewsCommand(updateRepository,
                 iaViewReadRepository);
         removeCategoryFromCategorisedIAViewsCommand = new RemoveCategoryFromCategorisedIAViewsCommand(updateRepository,
+                iaViewReadRepository);
+        removeCategoryFromCategorisedIAViewsBelowThresholdCommand = new RemoveCategoryFromCategorisedIAViewsBelowThresholdCommand(updateRepository,
                 iaViewReadRepository);
     }
 
@@ -61,6 +63,9 @@ public class ProcessMessageService {
         logger.info("Publishing category {}", category.getTtl());
         runCommandOnCategory(addCategoryToUncategorisedIAViewsCommand, category);
         runCommandOnCategory(removeCategoryFromCategorisedIAViewsCommand, category);
+        if (Category.hasThreshold(category.getSc())) {
+            runCommandOnCategory(removeCategoryFromCategorisedIAViewsBelowThresholdCommand, category);
+        }
 
         waitForUpdatesToCompleteAndCommit();
     }

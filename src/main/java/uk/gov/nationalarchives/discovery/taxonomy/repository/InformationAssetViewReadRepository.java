@@ -6,13 +6,18 @@ import uk.gov.nationalarchives.discovery.taxonomy.domain.repository.SearchQueryR
  * Created by jcharlet on 8/1/16.
  */
 public interface InformationAssetViewReadRepository {
-    Integer countItemsNotMatchingQueryAndWithCategory(String categoryQuery, String categoryId, Double scoreThreshold);
+    Integer countItemsMatchingQueryAndWithoutCategory(String categoryQuery, String categoryId, Double queryThreshold);
 
-    SearchQueryResultsWithCursor searchItemsNotMatchingQueryAndWithCategory(String categoryQuery, String categoryId, boolean hasQueryThreshold, String cursorMark,
-                                                            Integer pageSize);
-
-    Integer countItemsMatchingQueryAndWithoutCategory(String categoryQuery, String categoryId, Double scoreThreshold);
-
-    SearchQueryResultsWithCursor searchItemsMatchingQueryAndWithoutCategory(String categoryQuery, String categoryId, boolean hasQueryThreshold, String cursorMark,
+    SearchQueryResultsWithCursor searchItemsMatchingQueryAndWithoutCategory(String categoryQuery, String categoryId, Double queryThreshold, String cursorMark,
                                                                             Integer pageSize);
+
+    Integer countItemsNotMatchingQueryAndWithCategory(String categoryQuery, String categoryId);
+
+    SearchQueryResultsWithCursor searchItemsNotMatchingQueryAndWithCategory(String categoryQuery, String categoryId, String cursorMark,
+                                                                            Integer pageSize);
+
+    SearchQueryResultsWithCursor searchItemsMatchingQueryBelowThresholdAndWithCategory(String categoryQuery, String categoryId, Double
+            queryThreshold, String cursorMark, Integer pageSize);
+
+    int countItemsMatchingQueryBelowThresholdAndWithCategory(String categoryQuery, String categoryId, Double queryThreshold);
 }

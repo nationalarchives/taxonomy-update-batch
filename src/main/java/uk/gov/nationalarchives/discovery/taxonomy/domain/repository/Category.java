@@ -24,6 +24,10 @@ public class Category {
     private Double sc;
     private Boolean lck;
 
+    public static boolean hasThreshold(Double score) {
+        return !(new Double(0).equals(score));
+    }
+
     public String get_id() {
 	return _id;
     }

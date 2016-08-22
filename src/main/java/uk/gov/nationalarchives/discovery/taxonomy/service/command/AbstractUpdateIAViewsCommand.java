@@ -25,10 +25,6 @@ public abstract class AbstractUpdateIAViewsCommand {
         return commandName;
     }
 
-    protected boolean hasThreshold(Double score) {
-        return !(new Double(0).equals(score));
-    }
-
     public abstract int countItemsToUpdate(Category category);
 
     public abstract SearchQueryResultsWithCursor searchItemsToUpdate(Category category, String lastCursorMark, int pageSize);

@@ -10,22 +10,22 @@ import java.util.List;
 /**
  * Created by jcharlet on 8/15/16.
  */
-public class RemoveCategoryFromCategorisedIAViewsCommand extends AbstractUpdateIAViewsCommand {
+public class RemoveCategoryFromCategorisedIAViewsBelowThresholdCommand extends AbstractUpdateIAViewsCommand {
 
-    public RemoveCategoryFromCategorisedIAViewsCommand(UpdateRepository updateRepository, InformationAssetViewReadRepository iaViewReadRepository) {
+    public RemoveCategoryFromCategorisedIAViewsBelowThresholdCommand(UpdateRepository updateRepository, InformationAssetViewReadRepository iaViewReadRepository) {
         super(updateRepository, iaViewReadRepository, "remove");
     }
 
     @Override
     public int countItemsToUpdate(Category category) {
-        return iaViewReadRepository.countItemsNotMatchingQueryAndWithCategory(category.getQry(), category
-                .getCiaid());
+        return iaViewReadRepository.countItemsMatchingQueryBelowThresholdAndWithCategory(category.getQry(), category
+                .getCiaid(), category.getSc());
     }
 
     @Override
     public SearchQueryResultsWithCursor searchItemsToUpdate(Category category, String lastCursorMark, int pageSize) {
-        return iaViewReadRepository.searchItemsNotMatchingQueryAndWithCategory(category.getQry(),
-                category.getCiaid(), lastCursorMark, pageSize);
+        return iaViewReadRepository.searchItemsMatchingQueryBelowThresholdAndWithCategory(category.getQry(),
+                category.getCiaid(), category.getSc(), lastCursorMark, pageSize);
     }
 
     @Override

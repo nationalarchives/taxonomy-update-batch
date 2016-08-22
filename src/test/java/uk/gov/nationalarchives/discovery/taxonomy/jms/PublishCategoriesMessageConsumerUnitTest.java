@@ -20,13 +20,12 @@ import static org.mockito.Mockito.verify;
  * Created by jcharlet on 8/1/16.
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-public class PublishCategoriesMessageConsumerTest {
-
-    @Mock
-    ProcessMessageService processMessageService;
+public class PublishCategoriesMessageConsumerUnitTest {
 
     @Rule
     public MockitoRule mockitoRule = MockitoJUnit.rule();
+    @Mock
+    ProcessMessageService processMessageService;
 
     @Test
     public void testHandleMessage() throws JMSException {

@@ -23,7 +23,6 @@ import org.springframework.data.mongodb.core.convert.DefaultDbRefResolver;
 import org.springframework.data.mongodb.core.convert.DefaultMongoTypeMapper;
 import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
 import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
-import org.springframework.stereotype.Component;
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -32,7 +31,6 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "mongo.categories")
 @EnableConfigurationProperties
-@Component
 //TODO JCT ensure index when app starts
 public class MongoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(MongoConfiguration.class);
@@ -91,6 +89,7 @@ public class MongoConfiguration {
             }
             client = new MongoClient(listOfServerAddresses);
         } else {
+            logger.info("mongo categories database: {}:{}/{}", hosts, ports, database);
             client = new MongoClient(hosts,
                     Integer.valueOf(ports));
         }

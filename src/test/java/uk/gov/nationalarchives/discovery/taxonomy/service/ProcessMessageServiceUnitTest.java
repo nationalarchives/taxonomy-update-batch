@@ -22,7 +22,7 @@ import static org.mockito.Mockito.when;
  * Created by jcharlet on 8/1/16.
  */
 @RunWith(SpringJUnit4ClassRunner.class)
-public class ProcessMessageServiceTest {
+public class ProcessMessageServiceUnitTest {
 
     @Rule
     public MockitoRule mockitoRule = MockitoJUnit.rule();
