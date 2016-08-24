@@ -17,6 +17,7 @@ import uk.gov.nationalarchives.discovery.taxonomy.repository.InformationAssetVie
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 /**
  * Created by jcharlet on 8/1/16.
@@ -41,9 +42,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
             return countItemsMatchingQueryWithoutCategoryAndAboveOrBelowScore(categoryQuery, categoryId, queryThreshold, null);
         }
 
-        String matchCategoryIdQuery= InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-
-        SolrQuery query = createSolrQuery(textnocasnopunc(categoryQuery), arrayDoesNotContain(matchCategoryIdQuery),
+        SolrQuery query = createSolrQuery(matchQuery(categoryQuery), doesNotMatchCategory(categoryId),
                 null, 0, false);
 
         QueryResponse queryResponse = querySolrIndex(query);
@@ -56,9 +55,8 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
         String lastCursorMark = null;
         int nbOfItems = 0;
         while (true) {
-            String matchCategoryIdQuery = InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-            SolrQuery query = createSolrQuery(textnocasnopunc(categoryQuery), arrayDoesNotContain
-                    (matchCategoryIdQuery), lastCursorMark, pageSize, Category.hasThreshold(aboveScore));
+            SolrQuery query = createSolrQuery(matchQuery(categoryQuery), doesNotMatchCategory(categoryId)
+                    , lastCursorMark, pageSize, Category.hasThreshold(aboveScore));
 
             QueryResponse queryResponse = querySolrIndex(query);
 
@@ -86,8 +84,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
         String lastCursorMark = null;
         int nbOfItems = 0;
         while (true) {
-            String matchCategoryIdQuery = InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-            SolrQuery query = createSolrQuery(textnocasnopunc(categoryQuery), matchCategoryIdQuery, lastCursorMark,
+            SolrQuery query = createSolrQuery(matchQuery(categoryQuery), matchCategory(categoryId), lastCursorMark,
                     pageSize, true);
 
             QueryResponse queryResponse = querySolrIndex(query);
@@ -111,9 +108,8 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     @Override
     public SearchQueryResultsWithCursor searchItemsMatchingQueryAndWithoutCategory(String categoryQuery, String categoryId, Double
             queryThreshold, String cursorMark, Integer pageSize) {
-        String matchCategoryIdQuery= InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
         boolean hasThreshold = Category.hasThreshold(queryThreshold);
-        SolrQuery query = createSolrQuery(textnocasnopunc(categoryQuery), arrayDoesNotContain(matchCategoryIdQuery),
+        SolrQuery query = createSolrQuery(matchQuery(categoryQuery), doesNotMatchCategory((categoryId)),
                 cursorMark, pageSize, hasThreshold);
 
         QueryResponse queryResponse = querySolrIndex(query);
@@ -131,8 +127,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     @Override
     public SearchQueryResultsWithCursor searchItemsMatchingQueryBelowThresholdAndWithCategory(String categoryQuery, String categoryId, Double
             queryThreshold, String cursorMark, Integer pageSize) {
-        String matchCategoryIdQuery= InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-        SolrQuery query = createSolrQuery(textnocasnopunc(categoryQuery), matchCategoryIdQuery, cursorMark, pageSize,
+        SolrQuery query = createSolrQuery(matchQuery(categoryQuery), matchCategory(categoryId), cursorMark, pageSize,
                 Category.hasThreshold(queryThreshold));
 
         QueryResponse queryResponse = querySolrIndex(query);
@@ -150,8 +145,8 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
 
     @Override
     public Integer countItemsNotMatchingQueryAndWithCategory(String categoryQuery, String categoryId) {
-        String matchCategoryIdQuery = InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-        SolrQuery query = createSolrQuery(not(textnocasnopunc(categoryQuery)), matchCategoryIdQuery, null, 0, false);
+        SolrQuery query = createSolrQuery(doesNotMatchQuery((categoryQuery)), matchCategory(categoryId), null, 0,
+                false);
 
         QueryResponse queryResponse = querySolrIndex(query);
 
@@ -162,8 +157,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     public SearchQueryResultsWithCursor searchItemsNotMatchingQueryAndWithCategory(String categoryQuery, String categoryId,
                                                                                    String cursorMark,
                                                                                    Integer pageSize) {
-        String matchCategoryIdQuery= InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
-        SolrQuery query = createSolrQuery(not(textnocasnopunc(categoryQuery)), matchCategoryIdQuery, cursorMark,
+        SolrQuery query = createSolrQuery(doesNotMatchQuery((categoryQuery)), matchCategory(categoryId), cursorMark,
                 pageSize, false);
 
         QueryResponse queryResponse = querySolrIndex(query);
@@ -176,6 +170,66 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
         return new SearchQueryResultsWithCursor(iaids, queryResponse.getNextCursorMark());
     }
 
+
+    @Override
+    public List<String> searchItemsMatchingQueryWithoutCategoryAndFilterByDocIds(String categoryQuery, String categoryId, Double queryThreshold, List<String> documentIds) {
+
+        //FIXME take into account with / without threshold
+
+        boolean hasQueryThreshold = Category.hasThreshold(queryThreshold);
+
+        String filterQuery = doesNotMatchCategory(categoryId) + " " + matchDocumentIds(documentIds);
+        SolrQuery query = createSolrQuery(matchQuery(categoryQuery), filterQuery, null,
+                pageSize, hasQueryThreshold);
+
+        QueryResponse queryResponse = querySolrIndex(query);
+
+        List<String> iaids = new ArrayList<>();
+        for (SolrDocument solrDocument : queryResponse.getResults()) {
+            iaids.add(solrDocument.get(SOLR_DOCREFERENCE_FIELD).toString());
+        }
+        return iaids;
+    }
+
+    @Override
+    public List<String> searchItemsNotMatchingQueryWithCategoryAndFilterByDocIds(String categoryQuery, String categoryId, Double queryThreshold, List<String> documentIds) {
+
+        //FIXME to refactor nicely
+        boolean hasQueryThreshold = Category.hasThreshold(queryThreshold);
+
+        String filterQuery = matchCategory(categoryId) + " " + matchDocumentIds(documentIds);
+        SolrQuery query = createSolrQuery(doesNotMatchQuery(categoryQuery), filterQuery, null,
+                pageSize, hasQueryThreshold);
+
+        QueryResponse queryResponse = querySolrIndex(query);
+
+        List<String> iaids = new ArrayList<>();
+        for (SolrDocument solrDocument : queryResponse.getResults()) {
+            iaids.add(solrDocument.get(SOLR_DOCREFERENCE_FIELD).toString());
+        }
+        return iaids;
+    }
+
+    @Override
+    public List<String> searchItemsMatchingQueryBelowThresholdWithCategoryAndFilterByDocIds(String categoryQuery, String categoryId, Double queryThreshold, List<String> documentIds) {
+
+        //FIXME to refactor nicely
+
+        boolean hasQueryThreshold = Category.hasThreshold(queryThreshold);
+
+        String filterQuery = doesNotMatchCategory(categoryId) + " " + matchDocumentIds(documentIds);
+        SolrQuery query = createSolrQuery(matchQuery(categoryQuery), filterQuery, null,
+                pageSize, hasQueryThreshold);
+
+        QueryResponse queryResponse = querySolrIndex(query);
+
+        List<String> iaids = new ArrayList<>();
+        for (SolrDocument solrDocument : queryResponse.getResults()) {
+            iaids.add(solrDocument.get(SOLR_DOCREFERENCE_FIELD).toString());
+        }
+        return iaids;
+    }
+
     private QueryResponse querySolrIndex(SolrQuery query) {
         QueryResponse queryResponse;
         try {
@@ -186,27 +240,42 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
         return queryResponse;
     }
 
-    private String not(String query) {
-        return "NOT(" + query + ")";
-    }
-    private String arrayDoesNotContain(String query) {
-        return "-(" + query + ")";
+
+    private String matchDocumentIds(List<String> documentIds) {
+        StringJoiner stringJoiner = new StringJoiner(" OR ", "DOCREFERENCE:(", ")");
+        for (String documentId : documentIds) {
+            stringJoiner.add(documentId);
+        }
+
+        return stringJoiner.toString();
     }
 
-    private String textnocasnopunc(String query){
+    private String matchQuery(String query) {
         return "textnocasnopunc:(" + query + ")";
     }
 
-    private SolrQuery createSolrQuery(String categoryQuery, String matchCategoryIdQuery,
+    private String doesNotMatchQuery(String query) {
+        return "NOT(" + matchQuery(query) + ")";
+    }
+
+    private String matchCategory(String categoryId) {
+        return InformationAssetViewFields.TAXONOMYID + ":" + categoryId;
+    }
+
+    private String doesNotMatchCategory(String query) {
+        return "-(" + matchCategory(query) + ")";
+    }
+
+    private SolrQuery createSolrQuery(String categoryQuery, String filterQuery,
                                       String cursorMark, Integer pageSize, boolean hasQueryThreshold) {
         String solrQuery;
         String solrFilter;
         if (!hasQueryThreshold) {
             solrQuery = "*:*";
-            solrFilter = categoryQuery + " " + matchCategoryIdQuery;
+            solrFilter = categoryQuery + " " + filterQuery;
         } else {
             solrQuery = categoryQuery;
-            solrFilter = matchCategoryIdQuery;
+            solrFilter = filterQuery;
         }
 
 

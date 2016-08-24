@@ -21,7 +21,10 @@ import uk.gov.nationalarchives.discovery.taxonomy.service.command.RemoveCategory
 import uk.gov.nationalarchives.discovery.taxonomy.service.command.RemoveCategoryFromCategorisedIAViewsCommand;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Created by jcharlet on 8/1/16.
@@ -31,19 +34,23 @@ public class ProcessMessageService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
     private final CategoryRepository categoryRepository;
-    private final InformationAssetViewWriteRepository informationAssetViewWriteRepository;
+    private final InformationAssetViewReadRepository iaViewReadRepository;
+    private final InformationAssetViewWriteRepository iaViewWriteRepository;
     private final UpdateRepository updateRepository;
     private final AddCategoryToUncategorisedIAViewsCommand addCategoryToUncategorisedIAViewsCommand;
     private final RemoveCategoryFromCategorisedIAViewsCommand removeCategoryFromCategorisedIAViewsCommand;
     private final RemoveCategoryFromCategorisedIAViewsBelowThresholdCommand removeCategoryFromCategorisedIAViewsBelowThresholdCommand;
+
     @Value("${solr.cloud.read.query-page-size}")
     public Integer pageSize;
+
 
 
     @Autowired
     public ProcessMessageService(CategoryRepository categoryRepository, InformationAssetViewReadRepository iaViewReadRepository, InformationAssetViewWriteRepository informationAssetViewWriteRepository, UpdateRepository updateRepository) {
         this.categoryRepository = categoryRepository;
-        this.informationAssetViewWriteRepository = informationAssetViewWriteRepository;
+        this.iaViewWriteRepository = informationAssetViewWriteRepository;
+        this.iaViewReadRepository = iaViewReadRepository;
         this.updateRepository = updateRepository;
         addCategoryToUncategorisedIAViewsCommand = new AddCategoryToUncategorisedIAViewsCommand(updateRepository,
                 iaViewReadRepository);
@@ -116,7 +123,7 @@ public class ProcessMessageService {
                 Thread.sleep(1000);
             }
             Thread.sleep(2000);
-            informationAssetViewWriteRepository.commit();
+            iaViewWriteRepository.commit();
         } catch (InterruptedException e) {
             logger.error("process was interrupted", e);
         }
@@ -124,9 +131,61 @@ public class ProcessMessageService {
 
 
     public List<String> categoriseDocuments(List<String> documents) {
-        List<String> listOfCategoryIdsInError = new ArrayList<>();
+        List<String> listOfCategoryIdsInError = Collections.synchronizedList(new ArrayList<String>());
         logger.info("Categorising documents {}", StringUtils.join(", ", documents));
-        //TODO implement categoriseDocuments
+
+        Iterable<Category> categoryIterator = categoryRepository.findAll();
+        for (Category category : categoryIterator) {
+            CompletableFuture<Void> updateAsyncTask = CompletableFuture.runAsync(() -> {
+                try {
+                    updateDocumentsForCategory(documents, category);
+                } catch (Exception e) {
+                    String ciaid = category.getCiaid();
+                    listOfCategoryIdsInError.add(ciaid);
+                    logger.error("an error occured while categorising documents for that category: "
+                            + ciaid + ": " + e.getMessage());
+                }
+            });
+
+            try {
+                updateAsyncTask.get();
+            } catch (InterruptedException | ExecutionException e) {
+                logger.error("an error occured while categorising documents for that task: "
+                        + updateAsyncTask.toString() + ": " + e.getMessage());
+            }
+
+        }
+
         return listOfCategoryIdsInError;
+    }
+
+    private void updateDocumentsForCategory(List<String> documents, Category category) {
+
+        logger.debug("categorising documents for category {}", category.getTtl());
+        List<String> iaidsToAdd = iaViewReadRepository.searchItemsMatchingQueryWithoutCategoryAndFilterByDocIds
+                (category.getQry(), category.getCiaid(), category.getSc(), documents);
+
+        if (!iaidsToAdd.isEmpty()) {
+            updateRepository.addCategoryToIaids(category, iaidsToAdd);
+        }
+
+        List<String> iaidsToRemove = iaViewReadRepository
+                .searchItemsNotMatchingQueryWithCategoryAndFilterByDocIds
+                        (category.getQry(), category.getCiaid(), category.getSc(), documents);
+
+        if (!iaidsToRemove.isEmpty()) {
+            updateRepository.removeCategoryFromIaids(category, iaidsToRemove);
+        }
+
+        if (Category.hasThreshold(category.getSc())) {
+            iaidsToRemove = iaViewReadRepository
+                    .searchItemsMatchingQueryBelowThresholdWithCategoryAndFilterByDocIds
+                            (category.getQry(), category.getCiaid(), category.getSc(), documents);
+
+            if (!iaidsToRemove.isEmpty()) {
+                updateRepository.removeCategoryFromIaids(category, iaidsToRemove);
+            }
+
+        }
     }
 }
