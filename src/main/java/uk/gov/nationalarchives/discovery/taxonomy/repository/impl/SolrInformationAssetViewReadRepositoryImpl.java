@@ -2,6 +2,7 @@ package uk.gov.nationalarchives.discovery.taxonomy.repository.impl;
 
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.params.CursorMarkParams;
@@ -233,7 +234,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     private QueryResponse querySolrIndex(SolrQuery query) {
         QueryResponse queryResponse;
         try {
-            queryResponse = solrCloudReadServer.query(query);
+            queryResponse = solrCloudReadServer.query(query, SolrRequest.METHOD.POST);
         } catch (Exception e) {
             throw new TaxonomyException(TaxonomyErrorType.SOLR_READ_EXCEPTION, e);
         }
