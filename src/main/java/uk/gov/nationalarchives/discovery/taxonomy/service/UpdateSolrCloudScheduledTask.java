@@ -48,7 +48,6 @@ public class UpdateSolrCloudScheduledTask {
     @SuppressWarnings("unchecked")
     @Scheduled(fixedRateString = "${scheduler.update-solr.rate-between-updates}")
     public void updateSolrCloudWithLatestUpdatesOnCategories() {
-        //FIXME when I try to shutdown the application (with intellij), it fails because of updates to Solr
         List<AtomicUpdate> listOfUpdates = updateRepository.getLastUpdates(bulkUpdateSize);
         if (!CollectionUtils.isEmpty(listOfUpdates)) {
             logger.info("updating {} documents",listOfUpdates.size());

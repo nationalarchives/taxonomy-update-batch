@@ -175,7 +175,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     @Override
     public List<String> searchItemsMatchingQueryWithoutCategoryAndFilterByDocIds(String categoryQuery, String categoryId, Double queryThreshold, List<String> documentIds) {
 
-        //FIXME take into account with / without threshold
+        //FIXME take into account with / without threshold: to test and verify
 
         boolean hasQueryThreshold = Category.hasThreshold(queryThreshold);
 
@@ -187,6 +187,9 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
 
         List<String> iaids = new ArrayList<>();
         for (SolrDocument solrDocument : queryResponse.getResults()) {
+            if (hasQueryThreshold && Double.valueOf(solrDocument.get("score").toString()) < queryThreshold) {
+                continue;
+            }
             iaids.add(solrDocument.get(SOLR_DOCREFERENCE_FIELD).toString());
         }
         return iaids;
@@ -195,7 +198,6 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     @Override
     public List<String> searchItemsNotMatchingQueryWithCategoryAndFilterByDocIds(String categoryQuery, String categoryId, Double queryThreshold, List<String> documentIds) {
 
-        //FIXME to refactor nicely
         boolean hasQueryThreshold = Category.hasThreshold(queryThreshold);
 
         String filterQuery = matchCategory(categoryId) + " " + matchDocumentIds(documentIds);
@@ -214,7 +216,7 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
     @Override
     public List<String> searchItemsMatchingQueryBelowThresholdWithCategoryAndFilterByDocIds(String categoryQuery, String categoryId, Double queryThreshold, List<String> documentIds) {
 
-        //FIXME to refactor nicely
+        //FIXME take into account with / without threshold: to test and verify
 
         boolean hasQueryThreshold = Category.hasThreshold(queryThreshold);
 
@@ -226,6 +228,9 @@ public class SolrInformationAssetViewReadRepositoryImpl implements InformationAs
 
         List<String> iaids = new ArrayList<>();
         for (SolrDocument solrDocument : queryResponse.getResults()) {
+            if (hasQueryThreshold && Double.valueOf(solrDocument.get("score").toString()) > queryThreshold) {
+                continue;
+            }
             iaids.add(solrDocument.get(SOLR_DOCREFERENCE_FIELD).toString());
         }
         return iaids;

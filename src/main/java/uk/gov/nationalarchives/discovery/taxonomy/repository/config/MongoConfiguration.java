@@ -31,7 +31,6 @@ import java.util.List;
 @Configuration
 @ConfigurationProperties(prefix = "mongo.categories")
 @EnableConfigurationProperties
-//TODO JCT ensure index when app starts
 public class MongoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(MongoConfiguration.class);
 
