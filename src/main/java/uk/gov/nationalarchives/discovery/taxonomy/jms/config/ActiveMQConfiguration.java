@@ -39,6 +39,8 @@ class ActiveMQConfiguration {
         return messageListenerAdapter;
     }
 
+    //FIXME categorisationContainer prevents the application to shut down quickly, it stays alive until there are no
+    // documents to categorise/categories to publish
     @Bean
     DefaultMessageListenerContainer categorisationContainer(MessageListenerAdapter categorisationListenerAdapter,
                                                             ConnectionFactory connectionFactory) {

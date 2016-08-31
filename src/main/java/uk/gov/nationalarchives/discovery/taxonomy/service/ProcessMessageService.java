@@ -156,6 +156,8 @@ public class ProcessMessageService {
 
         }
 
+        waitForUpdatesToCompleteAndCommit();
+
         return listOfCategoryIdsInError;
     }
 
